@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Dominio, Rango y Asíntotas</title>
+  <script src="https://cdn.jsdelivr.net/npm/mathjs@11/lib/browser/math.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f7fa;
+      padding: 20px;
+      max-width: 800px;
+      margin: auto;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+    label, input, button {
+      display: block;
+      width: 100%;
+      margin-top: 15px;
+      padding: 10px;
+      font-size: 16px;
+    }
+    button {
+      background: #007acc;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #005f99;
+    }
+    .output {
+      margin-top: 20px;
+      background: #e0f7fa;
+      border-left: 5px solid #00796b;
+      padding: 15px;
+      font-size: 16px;
+    }
+    canvas {
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Dominio, Rango y Asíntotas</h1>
+
+  <label>Ingresa la función (usa "x" como variable):</label>
+  <input type="text" id="funcion" placeholder="Ej: 1/(x-2), sqrt(x), x^2-4, etc.">
+
+  <button onclick="calcular()">Calcular y Graficar</button>
+
+  <div id="resultado" class="output"></div>
+
+  <canvas id="grafico" width="700" height="400"></canvas>
+
+  <script>
+    let chart;
+
+    function calcular() {
+      const expr = document.getElementById('funcion').value;
+      const resultadoDiv = document.getElementById('resultado');
+
+      let xValues = [], yValues = [], rango = [];
+      let minY = Infinity, maxY = -Infinity;
+      let dominio = [];
+      let asintotas = [];
+
+      const f = math.compile(expr);
+
+      for (let x = -50; x <= 50; x += 0.2) {
+        try {
+          let y = f.evaluate({ x: x });
+          if (typeof y === 'number' && isFinite(y)) {
+            xValues.push(x.toFixed(2));
+            yValues.push(y);
+            rango.push(y);
+            dominio.push(x.toFixed(2));
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+          } else {
+            xValues.push(x.toFixed(2));
+            yValues.push(null);
+            asintotas.push(parseFloat(x.toFixed(2)));
+          }
+        } catch (e) {
+          xValues.push(x.toFixed(2));
+          yValues.push(null);
+          asintotas.push(parseFloat(x.toFixed(2)));
+        }
+      }
+
+      // Eliminar duplicados en asintotas
+      asintotas = [...new Set(asintotas)];
+
+      const rangoTexto = `Rango: aprox. desde ${minY.toFixed(2)} hasta ${maxY.toFixed(2)}`;
+      const dominioTexto = `Dominio: función definida entre los valores válidos de x (evitando asíntotas)`;
+      const asintotasTexto = asintotas.length > 0
+        ? `<strong>Asíntotas verticales detectadas en:</strong> x = ${asintotas.join(', ')}`
+        : `No se detectaron asíntotas verticales en el intervalo examinado.`;
+
+      resultadoDiv.innerHTML = `
+        <strong>Función:</strong> f(x) = ${expr} <br><br>
+        <strong>${dominioTexto}</strong><br>
+        <strong>${rangoTexto}</strong><br>
+        ${asintotasTexto}
+      `;
+
+      if (chart) chart.destroy();
+
+      const ctx = document.getElementById('grafico').getContext('2d');
+
+      const datasets = [{
+        label: 'f(x)',
+        data: yValues,
+        borderColor: '#1976d2',
+        borderWidth: 2,
+        fill: false,
+        pointRadius: 0
+      }];
+
+      // Añadir líneas verticales para asíntotas
+      asintotas.forEach(x => {
+        const data = Array(xValues.length).fill(null);
+        const index = xValues.findIndex(val => parseFloat(val) === x);
+        if (index !== -1) {
+          data[index] = maxY + 10; // para que la línea aparezca
+          datasets.push({
+            label: `Asíntota en x=${x}`,
+            data,
+            borderColor: '#e53935',
+            borderDash: [5, 5],
+            pointRadius: 0,
+            borderWidth: 2,
+            fill: false
+          });
+        }
+      });
+
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: xValues,
+          datasets
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: true }
+          },
+          scales: {
+            x: {
+              title: { display: true, text: 'x' }
+            },
+            y: {
+              title: { display: true, text: 'f(x)' },
+              min: minY - 5,
+              max: maxY + 5
+            }
+          }
+        }
+      });
+    }
+  </script>
+
+</body>
+</html>
